@@ -5,9 +5,9 @@
 
 # Description -------------------------------------------------------------
 
-# This script creates runs the economic analysis for a set of in situ oil shale
-# simualtions prepared for ICSE by Michal Hradisky. Structure is as follows:
-#
+# This script creates runs a set of economic analyses for ex situ oil shale.
+# Structure is as follows:
+# 
 # 1. Sets working directory, libraries, and options
 # 2. BLAH
 
@@ -18,13 +18,8 @@ path <- NULL
 
 # Path switch - uncomment and/or replace with the path directory for your local
 # copy of the Git repository and Dropbox files.
-
-pwd.drop <- "D:/"                       # Windows
-pwd.git  <- "C:/Users/Jon/Documents/R/"
-# pwd.drop <- "/Users/john/"              # Mac
-# pwd.git  <- "/Users/john/Documents/"
-# pwd.drop <- "~/"                        # Linux
-# pwd.git  <- "~/Documents/R Projects/"
+pwd.drop <- "C:/Users/jonwi/"
+pwd.git  <- "C:/Users/jonwi/Documents/R/"
 
 # Define paths.
 # "raw"  is raw data (*.dbf files from DOGM, *.csv files, etc.).
@@ -33,13 +28,11 @@ pwd.git  <- "C:/Users/Jon/Documents/R/"
 # "plot" is the directory for saving plot *.pdf files.
 # "work" is the working directory where main.R and IO_options.R are located.
 # "fun"  is the directory for all *.R functions.
-path$raw   <- paste(pwd.drop, "Dropbox/Oil Shale/Raw Data", sep = "")
-path$data  <- paste(pwd.drop, "Dropbox/Oil Shale/Prepared Data", sep = "")
-path$plot  <- paste(pwd.drop, "Dropbox/Oil Shale/Plots", sep = "")
-path$work  <- paste(pwd.git,  "oilshale/", sep = "")
-path$fun   <- paste(pwd.git,  "oilshale/Functions", sep = "")
-path$BCfig <- paste(pwd.drop, "Dropbox/Oil Shale/Book Chapter/Figures", sep = "")
-path$Cdata <- paste(pwd.drop, "Dropbox/CLEAR/DOGM Data/Prepared Data", sep = "")
+path$raw   <- paste(pwd.drop, "Dropbox/ExShale/Raw Data", sep = "")
+path$data  <- paste(pwd.drop, "Dropbox/ExShale/Prepared Data", sep = "")
+path$plot  <- paste(pwd.drop, "Dropbox/ExShale/Plots", sep = "")
+path$work  <- paste(pwd.git,  "exshale/", sep = "")
+path$fun   <- paste(pwd.git,  "exshale/Functions", sep = "")
 
 # Remove temporary path objects
 remove(pwd.drop, pwd.git)
@@ -51,12 +44,7 @@ setwd(path$work)
 # 1.2 Functions -----------------------------------------------------------
 
 # List of functions used in this script to be loaded here
-flst <- file.path(path$fun, c("wtRadius.R",
-                              "eNPV.R",
-                              "fcap.R",
-                              "ffoc.R",
-                              "stax.R",
-                              "fNPV.R",
+flst <- file.path(path$fun, c("asYear.R",
                               "clipboard.R"))
 
 # Load each function in list then remove temporary file list variables
@@ -69,6 +57,7 @@ library(zoo)
 library(sqldf)
 library(lhs)
 library(beepr)
+library(ggplot2)
 
 
 # 1.4 Options -------------------------------------------------------------
@@ -82,88 +71,39 @@ source("UO_options.R")
 
 # 2.0 Read in simulation data ---------------------------------------------
 
-# Load from dataimport.R script
-load(file.path(path$data, "dataImport.rda"))
-
-# Concatonate parameter space with nwell vector
-temp1 <- data.frame(index = rep(1, times = length(nwell)), nwell, NER, TE)
-temp2 <- data.frame(index = rep(1, times = nrow(uopt$parR)), uopt$parR)
-parR <- merge(x = temp1, y = temp2, all = T); remove(temp1, temp2)
-parR <- parR[,-1]
 
 
 # Loop --------------------------------------------------------------------
 
 # Predefine results space
-oilSP <- rep(0, times = nrow(parR))
-CPFB <-  oilSP
-TCI <-   oilSP
-Toil <-  oilSP
-sTE <-   oilSP
-prodL <- oilSP
-
-# For each set of input parameter picks j
-for (j in 1:nrow(parR)) {
-
-  # x.x Drilling ------------------------------------------------------------
-
-  # Calculate well segment lengths
-  wellL <- data.frame(turn = wtRadius(t = uopt$wellDesign$turnrate,
-                                      p = uopt$wellDesign$pipelength,
-                                      a = uopt$wellDesign$angle),
-                      total = parR$totalL[j])
-  wellL$stem <- uopt$wellDesign$TVD-wellL$turn
-  wellL$prod <- wellL$total-(wellL$stem+wellL$turn)
-
-  # Calculate well drilling schedule
-  drillsched <- rep(c(rep(0, parR$tDrill[j]-1), uopt$nrig), ceiling(parR$nwell[j]/uopt$nrig))
-
-  # If too many wells were drilled in last time step
-  if (sum(drillsched) > parR$nwell[j]) {
-
-    # Replace last entry with correct number of wells
-    drillsched[length(drillsched)] <- parR$nwell[j]-sum(drillsched[1:(length(drillsched)-1)])
-  }
-
-  # Design and construction time
-  tconstr <- ifelse(length(drillsched) >= uopt$tconstr.min, length(drillsched), uopt$tconstr.min)
-  tdesign <- round(tconstr/3)
-
-  # Calculate capital cost for wells
-  capwell <- drillsched*parR$well.cap[j]
 
 
-  # Scale and Fit Base Data ------------------------------------
 
-  # Scale data
-  coil <-  dcoil[,(ceiling(j/nrow(uopt$parR))+1)]*(wellL$prod/uopt$base.prod)*parR$rec[j]
-  power <- denergy[,(ceiling(j/nrow(uopt$parR))+1)]*(wellL$prod/uopt$base.prod)
+# Mine and Retort ---------------------------------------------------------
 
-  # Fit each oil/power data with approximation functions
-  fcoil <-  approxfun(x = dcoil$time, y = coil, rule = 2)
-  fpower <- approxfun(x = denergy$time, y = power)
+# Find amount of rock (i.e shale) mined and retorted in ton/day
+rock.retort <- uopt$parR$OPD/(uopt$parR$FA*uopt$bmr$eff.retort/42)
+rock.mined <-  rock.retort/uopt$bmr$eff.grind
+
+# Calculate scaling factors
+RM <- rock.mined/uopt$bmr$smine    # Rock mined
+RR <- rock.retort/uopt$bmr$sretort # Rock retorted
+O  <- uopt$parR$OPD/uopt$bmr$poil
+
+# Capital costs
+cMine <-   uopt$bmr$cmine*  RM^0.6*(uopt$cpi/uopt$cpiB) # Mine
+cRetort <- uopt$bmr$cretort*RR^0.6*(uopt$cpi/uopt$cpiB) # Retort
 
 
-  # Heating -----------------------------------------------------------------
+# Water
+wcool <- uopt$bmr$wcool*RM
+wboil <- uopt$bmr$wboil*RR
+steam <- uopt$bmr$steam*RR
+wmake <- wboil*
 
-  # Heater capital cost
-  capheat <- parR$nwell[j]*uopt$heatcost*(wellL$prod/uopt$heatBlength)^1 # scale linearly?
-
-  # Heating operating cost calculation
-  # Step 1: Calculate energy demand history
-  E <- NULL
-  for (k in 1:(max(denergy$time)-1)) {
-
-    # Itegrate heating demand
-    E <- c(E, integrate(fpower, k, k+1)$value)
-  }
-
-  # Convert from daily basis to hourly basis
-  E <- E*24
-
-  # Step 2: Multiply E by electricity price to get operating cost (also
-  # concatonate in an additional zero to fix length of E)
-  opheat <- c(0,E)*uopt$ep
+# Operating cost (utilities)
+opElec <- uopt$bmr$elec*RR*uopt$ep # Electricity
+opSteam <- uopt$steamp*steam       # Steam
 
 
   # Oil Production ----------------------------------------------------------
