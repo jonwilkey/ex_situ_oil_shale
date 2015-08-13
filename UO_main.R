@@ -50,6 +50,7 @@ flst <- file.path(path$fun, c("asYear.R",
                               "fcap.R",
                               "ffoc.R",
                               "stax.R",
+                              "fNPV.R",
                               "clipboard.R"))
 
 # Load each function in list then remove temporary file list variables
@@ -96,8 +97,9 @@ RR <- rock.retort/uopt$bmr$sretort # Rock retorted
 O  <- uopt$parR$OPD/uopt$bmr$poil
 
 # Capital costs
-cMine <-   uopt$bmr$cmine*  RM^0.6*(uopt$cpi/uopt$cpiB) # Mine
-cRetort <- uopt$bmr$cretort*RR^0.6*(uopt$cpi/uopt$cpiB) # Retort
+cMine <-   uopt$bmr$cmine*  RM^0.6*(231.6/100)#(uopt$cpi/uopt$cpiB) # Mine
+cRetort <- (uopt$bmr$cretort*RR^0.6*(577.4/297)+#(uopt$cpi/uopt$cpiB) # Retort
+            uopt$bmr$cclean*O^0.6*(577.4/297))
 
 # Water
 wcool <-  uopt$bmr$wcool*RM
@@ -111,7 +113,7 @@ wmake <-  wshale+wcool+wboil+(wboil+(steam/2.20462/998*264.172052))*uopt$wrloss-
 elec <- uopt$bmr$elec*RR
 
 # Operating cost (utilities)
-opMine <-  uopt$bmr$opmine*RM*(uopt$cpi/uopt$cpiB) # Mining
+opMine <-  uopt$bmr$opmine*RM*(231.6/100)#(uopt$cpi/uopt$cpiB) # Mining
 opElec <-  uopt$ep*elec                            # Electricity
 opSteam <- uopt$steamp*steam                       # Steam
 opWater <- wmake*uopt$wmakep+wcool*uopt$wcoolp+wboil*uopt$wboilp
@@ -134,6 +136,7 @@ cUtility = (50*steam*1000/24/365+             # Steam plant ($50/lb/hr)
             with(uopt, hubL*(eline+eswitch))+ # Electrical connection to grid
             58*wcool*1000/365/24/60+          # Cooling water ($58/gpm)
             wpipe$cpipe+                      # Water pipeline
+              (elec+wpipe$elec)/365/24*203+
             cRes)                             # Water reservoir
 
 
@@ -149,7 +152,7 @@ DCF <- data.frame(p = c(rep(0,4),                          # Construction period
 DCF$df <- 1/((1+uopt$parR$IRR)^(1:nrow(DCF)))
 
 # Calcualte oil production
-oil <- DCF$p*uopt$parR$OPD*365
+oil <- DCF$p*50e3*365#DCF$p*uopt$parR$OPD*365
 
 # Get capital cost schedule
 ccs <- fcap(cMine, cRetort, cUtility, oil)
@@ -172,11 +175,11 @@ DCF$Cv <- (-DCF$p*(opElec+wpipe$elec*uopt$ep) # Electricity
 
 # Fixed Costs
 DCF$Cf <- c(rep(0, 4),
-            rep(-ffoc(Nopers =      uopt$Nopers, # Covers everything except mine labor
+            rep(-ffoc(Nopers = uopt$Nopers,
                  mineWorkers = mineWorkers,
+                 mineLabor =   mineLabor,
                  CTDC =        ccs$TDC,
-                 CTPI =        ccs$TPI) 
-                -mineLabor, uopt$parR$nyear+2))  # ... added in here
+                 CTPI =        ccs$TPI), uopt$parR$nyear+2))  # ... added in here
 
 # Solve for oil price -----------------------------------------------------
 
@@ -186,16 +189,11 @@ oilSP <- uniroot(NPV, lower = 0, upper = 1e7)$root
 
 # Save results ------------------------------------------------------------
 
-# Total capital cost
-Toil[j] <- sum(oil)
-TCI[j] <-  ccs$TCI
-CPFB[j] <- ccs$TCI/(Toil[j]/length(oil))
-sTE[j] <-  sum(E)
-prodL[j] <- wellL$prod
 
-# Sound off when loop is complete
-beep(3, message("Script Finished"))
 
-# ... and really save results
-results <- data.frame(parR, oilSP, Toil, TCI, CPFB, sTE, prodL)
-save(results, file = file.path(path$data, "UO_main Results v5.rda"))
+# # Sound off when loop is complete
+# beep(3, message("Script Finished"))
+# 
+# # ... and really save results
+# results <- data.frame()
+# save(results, file = file.path(path$data, "exshale Results v1.rda"))

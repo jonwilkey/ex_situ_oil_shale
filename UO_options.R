@@ -55,7 +55,7 @@ uopt$bmr <- data.frame(eff.retort = 0.92,          # Fraction of oil recovered f
                        smine =      165700,        # Base shale mined (TPD)
                        sretort =    149130,        # Base shale retorted (TPD)
                        cmine =      465e6,         # Capital cost for mine (1981 USD)
-                       cretort =    392e6,         # Capital cost for retort (1981 USD)
+                       cretort =    302e6,         # Capital cost for retort (1981 USD)
                        elec =       277500*24*365, # Electricity usage (kWh/yr)
                        steam =      666*24*365,    # Steam usage (k lb/yr)
                        wcool =      608162,        # Cooling water usage - for mining (kgal/yr)
@@ -64,6 +64,7 @@ uopt$bmr <- data.frame(eff.retort = 0.92,          # Fraction of oil recovered f
                        wgenR =      1419259,       # Water generated that scales with retorting (kgal/yr)
                        wgenO =      416859,        # Water generated that scales with oil production (kgal/yr)
                        opmine =     77.22e6,       # Mine operating cost (1981 USD/yr)
+                       cclean =     90e6,          # Capital cost for retort gas cleaning and upgrading
                        poil =       99170)         # Crude oil production (BPD)
 
 
@@ -78,11 +79,11 @@ uopt$Nopers <- 54
 
 # Utah 2014 annual average industrial electricity price ($/kWh)
 # Data from EIA Average retail price of electricity to ultimate customers: http://www.eia.gov/electricity/data.cfm#sales
-uopt$ep <- 0.0607
+uopt$ep <-   0.05853534548#0.0607
 
 # Electrity infrastructure
-uopt$eline <-   425e3*(uopt$cpi/232.957) # Line cost ($/mi)
-uopt$eswitch <- 10e3*(uopt$cpi/232.957)  # Switching gear and tap ($/mi)
+uopt$eline <-   425e3#*(uopt$cpi/232.957) # Line cost ($/mi)
+uopt$eswitch <- 10e3#*(uopt$cpi/232.957)  # Switching gear and tap ($/mi)
 
 # Distance to nearest utility hub (mi)
 uopt$hubL <- 6.51
@@ -99,7 +100,6 @@ uopt$resS <-   90         # Reservoir size, in days of makeup water
 # Other utility charges
 uopt$steamp <- 6.60 # Steam price (USD) per k lb
 
-# Utility capital
 
 # Finance and Econ Terms --------------------------------------------------
 
@@ -120,7 +120,7 @@ uopt$fD <- c(0.1000,
              0.0328)
 
 # Research spending ($/bbl)
-uopt$rsp <- 0.74
+uopt$rsp <- 0.741865
 
 # Inflation rate (for adjusting NPV of Depreciation)
 uopt$inf <- 0.018
@@ -129,11 +129,10 @@ uopt$inf <- 0.018
 uopt$royalr <- 0.125
 
 # Severance taxes
-uopt$st.low <- 0.03
-uopt$st.high <- 0.05
-uopt$st.con <- 0.002
+uopt$st.low <-   0.03
+uopt$st.high <-  0.05
+uopt$st.con <-   0.002
 uopt$st.cut.o <- 13
-uopt$st.cut.g <- 1.5
 
 # Income tax rates
 uopt$rTS <- 0.05
