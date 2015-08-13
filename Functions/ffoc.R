@@ -8,6 +8,9 @@
 
 # Nopers - number of operators per shift
 
+# mineWorkers - total number of mine workers (all shifts) - just used to
+# calculate adminstrative expense (labor cost of mining modeled separately)
+
 # CTDC - total depreciable capital cost
 
 # CTPI - total permanent investment
@@ -25,7 +28,7 @@
 
 
 # Function ----------------------------------------------------------------
-ffoc <- function(Nopers, CTDC, CTPI) {
+ffoc <- function(Nopers, mineWorkers, CTDC, CTPI) {
 
   # Labor for operations
   LW <-   Nopers*5*2080*30 # Labor wages
@@ -47,8 +50,9 @@ ffoc <- function(Nopers, CTDC, CTPI) {
   ERD <- 0.059*(LS+LW+MW+MS) # Employee relations dept.
   BS <-  0.074*(LS+LW+MW+MS) # Business services
 
-  # General Expenses
-  admin <- 200e3 # Administrative expense (1 admin), incentive compensation is separate
+  # General Expenses - just administrative expense, incentive compensation is
+  # separate
+  admin <- 200e3*ceiling((Nopers*5+mineWorkers)/20)
 
   # Property Taxes
   pt <- 0.01*CTPI

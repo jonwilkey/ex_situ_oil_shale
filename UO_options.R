@@ -35,6 +35,7 @@ uopt <- NULL
 
 uopt$parR <- data.frame(FA = 25,
                         OPD = 47041.76,
+                        nyear = 18,       # Minimum 10 years
                         IRR = 0.1)
 
 # Remove LHS
@@ -60,7 +61,9 @@ uopt$bmr <- data.frame(eff.retort = 0.92,          # Fraction of oil recovered f
                        wcool =      608162,        # Cooling water usage - for mining (kgal/yr)
                        wshale =     895116,        # Water usage - spent shale disposal (kgal/yr)
                        wboil =      2909611,       # Boiler feed water usage - for cooling tower (kgal/yr)
-                       wgen =       1836118,       # Water generated (kgal/yr)
+                       wgenR =      1419259,       # Water generated that scales with retorting (kgal/yr)
+                       wgenO =      416859,        # Water generated that scales with oil production (kgal/yr)
+                       opmine =     77.22e6,       # Mine operating cost (1981 USD/yr)
                        poil =       99170)         # Crude oil production (BPD)
 
 
@@ -68,7 +71,7 @@ uopt$bmr <- data.frame(eff.retort = 0.92,          # Fraction of oil recovered f
 # Labor -------------------------------------------------------------------
 
 # Number of operators per shift
-uopt$Nopers <- 3
+uopt$Nopers <- 54
 
 
 # Utilities ---------------------------------------------------------------
@@ -82,10 +85,16 @@ uopt$eline <-   425e3*(uopt$cpi/232.957) # Line cost ($/mi)
 uopt$eswitch <- 10e3*(uopt$cpi/232.957)  # Switching gear and tap ($/mi)
 
 # Distance to nearest utility hub (mi)
-uopt$hubL <- 50
+uopt$hubL <- 6.51
 
 # Water
-uopt$wrloss <- 0.03 # Percent water recycling losses
+uopt$wrloss <- 0.03       # Percent water recycling losses
+uopt$wmakep <- 50/325.853 # Makeup water price ($/kgal/yr)
+uopt$wcoolp <- 0.075      # Cooling water price ($/kgal)
+uopt$wboilp <- 1.80       # Boiler feed water price ($/kgal)
+uopt$pipeL <-  5          # Water pipeline length (mi)
+uopt$elevD <-  711        # Water pipeline elevation change (ft)
+uopt$resS <-   90         # Reservoir size, in days of makeup water
 
 # Other utility charges
 uopt$steamp <- 6.60 # Steam price (USD) per k lb
@@ -94,8 +103,8 @@ uopt$steamp <- 6.60 # Steam price (USD) per k lb
 
 # Finance and Econ Terms --------------------------------------------------
 
-# Minimum construction time (in days)
-uopt$tconstr.min <- round(365*9/12)
+# Process Utilization (i.e. number of days per year process is in operation)
+uopt$p <- 330
 
 # ACRS 10-yr Depreciation Schedule
 uopt$fD <- c(0.1000,
@@ -109,6 +118,9 @@ uopt$fD <- c(0.1000,
              0.0656,
              0.0655,
              0.0328)
+
+# Research spending ($/bbl)
+uopt$rsp <- 0.74
 
 # Inflation rate (for adjusting NPV of Depreciation)
 uopt$inf <- 0.018

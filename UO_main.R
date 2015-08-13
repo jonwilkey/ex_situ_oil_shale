@@ -45,6 +45,11 @@ setwd(path$work)
 
 # List of functions used in this script to be loaded here
 flst <- file.path(path$fun, c("asYear.R",
+                              "fwpc.R",
+                              "fres.R",
+                              "fcap.R",
+                              "ffoc.R",
+                              "stax.R",
                               "clipboard.R"))
 
 # Load each function in list then remove temporary file list variables
@@ -94,142 +99,99 @@ O  <- uopt$parR$OPD/uopt$bmr$poil
 cMine <-   uopt$bmr$cmine*  RM^0.6*(uopt$cpi/uopt$cpiB) # Mine
 cRetort <- uopt$bmr$cretort*RR^0.6*(uopt$cpi/uopt$cpiB) # Retort
 
-
 # Water
-wcool <- uopt$bmr$wcool*RM
-wboil <- uopt$bmr$wboil*RR
-steam <- uopt$bmr$steam*RR
-wmake <- wboil*
+wcool <-  uopt$bmr$wcool*RM
+wboil <-  uopt$bmr$wboil*RR
+wgen <-   uopt$bmr$wgenR*RR+uopt$bmr$wgenO*O
+wshale <- uopt$bmr$wshale*RM
+steam <-  uopt$bmr$steam*RR
+wmake <-  wshale+wcool+wboil+(wboil+(steam/2.20462/998*264.172052))*uopt$wrloss-wgen
+
+# Electricity
+elec <- uopt$bmr$elec*RR
 
 # Operating cost (utilities)
-opElec <- uopt$bmr$elec*RR*uopt$ep # Electricity
-opSteam <- uopt$steamp*steam       # Steam
+opMine <-  uopt$bmr$opmine*RM*(uopt$cpi/uopt$cpiB) # Mining
+opElec <-  uopt$ep*elec                            # Electricity
+opSteam <- uopt$steamp*steam                       # Steam
+opWater <- wmake*uopt$wmakep+wcool*uopt$wcoolp+wboil*uopt$wboilp
+
+# Mining labor count
+mineWorkers <- ceiling(1.5791*rock.mined^0.5391)
+mineLabor <-   mineWorkers*2080*30
 
 
-  # Oil Production ----------------------------------------------------------
+# Utilities ---------------------------------------------------------------
 
-  # Calculate maximum potential oil production (xg = 0) on daily basis (note -
-  # units are in kg)
-  moil <- c(0, diff(fcoil(1:max(dcoil$time))))
+# Water pipeline
+wpipe <- fwpc(wmake = wmake)
 
-  # Calculate actual oil (in bbl) = moil*(1-xg)/rho.oil*(6.2898 bbl/m^3)
-  oil <- moil*(1-parR$xg[j])/uopt$rho.oil*6.2898
+# Water reservoir
+cRes <- fres(wmake = wmake)
 
-
-  # Production, separation, and storage -------------------------------------
-
-  # Capital cost formula:
-  #
-  # capPSS = base(func. of length)*(new max oil/base max oil)^0.6*nwell
-  #
-  capPSS <- uopt$fcapPSS(wellL$total)*(max(oil)/parR$nwell[j]/uopt$capPSSbase)^0.6*parR$nwell[j]
-
-  # Operating cost formula:
-  #
-  # opPSS = (base cost/day/well as f(length))*(oil prod as f(time)/base oil prod)
-  #
-  # Since oil is total oil production from all wells, don't have to multiply by
-  # number of wells in simulation.
-  opPSS <- (uopt$fopPSS(wellL$total)/365)*(oil/uopt$opPSSbase)
+# Final Utilities Capital cost
+cUtility = (50*steam*1000/24/365+             # Steam plant ($50/lb/hr)
+            with(uopt, hubL*(eline+eswitch))+ # Electrical connection to grid
+            58*wcool*1000/365/24/60+          # Cooling water ($58/gpm)
+            wpipe$cpipe+                      # Water pipeline
+            cRes)                             # Water reservoir
 
 
-  # Utility Lines -----------------------------------------------------------
+# DCF Analysis ------------------------------------------------------------
 
-  # Capital cost of all utilities
-  capU <- with(uopt, hubL*(eline+eswitch))
+# Create DCF data.frame
+DCF <- data.frame(p = c(rep(0,4),                          # Construction period, no production
+                        0.45,                              # Startup year 1
+                        0.45+(uopt$p/365-0.45)/2,          # Startup year 2
+                        rep(uopt$p/365, uopt$parR$nyear))) # Full scale production
 
+# Discount factor
+DCF$df <- 1/((1+uopt$parR$IRR)^(1:nrow(DCF)))
 
-  # Capital Costing ---------------------------------------------------------
+# Calcualte oil production
+oil <- DCF$p*uopt$parR$OPD*365
 
-  ccs <- fcap(capheat, capPSS, capU, oil, capwell)
+# Get capital cost schedule
+ccs <- fcap(cMine, cRetort, cUtility, oil)
 
+# Capital investment vectors
+DCF$CTDC <-  -ccs$TDC*c(rep(0.25, 4), rep(0, uopt$parR$nyear+2))                        # Total Depreciable Capital
+DCF$WC <-    ccs$WC*c(rep(0, 4), -1, rep(0, uopt$parR$nyear), 1)                        # Working Capital
+DCF$land <-  -ccs$Land*c(0, 1, rep(0, 4+uopt$parR$nyear))                               # Land
+DCF$perm <-  -ccs$Permit*c(1, rep(0, 5+uopt$parR$nyear))                                # Permitting
+DCF$RIP <-   -ccs$RIP*c(rep(0, 4), 1, rep(0, uopt$parR$nyear+1))                        # Royalties for intellectual property
+DCF$start <- -ccs$Start*c(rep(0, 4), 1, rep(0, uopt$parR$nyear+1))                      # Startup
+DCF$D <-     ccs$TDC*c(rep(0, 4), uopt$fD, rep(0, (uopt$parR$nyear-length(uopt$fD)+2))) # Depreciation
 
-  # Fixed Costs -------------------------------------------------------------
+# Variable Costs
+DCF$Cv <- (-DCF$p*(opElec+wpipe$elec*uopt$ep) # Electricity
+           -oil*uopt$rsp                      # Research spending
+           -DCF$p*opMine                     # Mining
+           -DCF$p*opSteam                    # Steam
+           -DCF$p*opWater)                   # Water
 
-  opF <- ffoc(Nopers = uopt$Nopers, CTDC = ccs$TDC, CTPI = ccs$TPI)
+# Fixed Costs
+DCF$Cf <- c(rep(0, 4),
+            rep(-ffoc(Nopers =      uopt$Nopers, # Covers everything except mine labor
+                 mineWorkers = mineWorkers,
+                 CTDC =        ccs$TDC,
+                 CTPI =        ccs$TPI) 
+                -mineLabor, uopt$parR$nyear+2))  # ... added in here
 
+# Solve for oil price -----------------------------------------------------
 
-  # DCF Analysis ------------------------------------------------------------
-
-  # Make model data.frame
-  model <- data.frame(CTDC = c(rep(x = -ccs$TDC/(tdesign+tconstr), times = tdesign+tconstr),
-                               rep(x = 0,                          times = length(oil))))
-
-  # Design Capital
-  model$CD <- c(rep(x = -(ccs$Land+ccs$Permit)/tdesign, times = tdesign),
-                rep(x = 0,                              times = tconstr+length(oil)))
-
-  # Well Drilling and Completion Capital
-  model$CWD <- c(rep(x = 0, times = tdesign),
-                 -capwell,
-                 rep(0,     times = nrow(model)-(tdesign+length(capwell))))
-
-  # Startup Capital
-  model$CSt <- c(rep(x = 0, times = tdesign+tconstr),
-                 -(ccs$RIP+ccs$Start),
-                 rep(x = 0, times = length(oil)-1))
-
-  # Working Capital
-  model$CWC <- c(rep(x = 0, times = tdesign+tconstr),
-                 -ccs$WC,
-                 rep(x = 0, times = length(oil)-2),
-                 ccs$WC)
-
-  # Gas production
-  model$gasp <- c(rep(x = 0, times = tdesign+tconstr),
-                  moil*parR$xg[j]*uopt$convert.otg)
-
-  # Gas sales
-  model$gsale <- model$gasp*parR$gp[j]
-
-  # Gas royalties
-  model$rg <- -uopt$royalr*model$gsale
-
-  # Gas severance taxes
-  stg <- -stax(prod = model$gasp, ep = parR$gp[j], uopt$royalr, uopt$st.low, uopt$st.high, uopt$st.con, uopt$st.cut.o)
-
-  # PSS operating costs
-  model$opPSS <- c(rep(x = 0, times = tdesign+tconstr),
-                   -opPSS)
-
-  # Electricity/heating costs
-  model$opheat <- c(rep(x = 0, times = tdesign+tconstr),
-                    -opheat)
-
-  # Fixed costs (labor, maintenance, property taxes, insurance)
-  model$fixed <- c(rep(x = 0,        times = tdesign+tconstr),
-                   rep(x = -opF/365, times = length(oil)))
-
-  # Oil production
-  model$oilp <- c(rep(x = 0, times = tdesign+tconstr),
-                  oil)
-
-  # Depreciation
-  model$D <- c(rep(x = 0, times = tdesign+tconstr),
-               -ccs$TDC/365*
-                 uopt$fD[1:length(oil)]/
-                 ((1+uopt$inf)^
-                    floor(((tdesign+tconstr+1):(tdesign+tconstr+length(oil)))/365)))
-
-  # Discount factor
-  model$df <- 1/((1+parR$IRR[j])^floor((1:(tdesign+tconstr+length(oil)))/365))
+# Oil Supply Price
+oilSP <- uniroot(NPV, lower = 0, upper = 1e7)$root
 
 
-  # Solve for oil price -----------------------------------------------------
+# Save results ------------------------------------------------------------
 
-  # Oil Supply Price
-  oilSP[j] <- uniroot(NPV, lower = 0, upper = 1e7)$root
-
-
-  # Save results ------------------------------------------------------------
-
-  # Total capital cost
-  Toil[j] <- sum(oil)
-  TCI[j] <-  ccs$TCI
-  CPFB[j] <- ccs$TCI/(Toil[j]/length(oil))
-  sTE[j] <-  sum(E)
-  prodL[j] <- wellL$prod
-}
+# Total capital cost
+Toil[j] <- sum(oil)
+TCI[j] <-  ccs$TCI
+CPFB[j] <- ccs$TCI/(Toil[j]/length(oil))
+sTE[j] <-  sum(E)
+prodL[j] <- wellL$prod
 
 # Sound off when loop is complete
 beep(3, message("Script Finished"))

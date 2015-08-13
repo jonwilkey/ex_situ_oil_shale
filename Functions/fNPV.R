@@ -23,32 +23,32 @@
 NPV <- function(op) {
 
   # Oil Sales
-  osale <- model$oilp*op
+  osale <- oil*op
 
   # Royalties
   ro <- -uopt$royalr*osale
 
   # Severance taxes
-  sto <- -stax(prod = model$oilp, ep = op, uopt$royalr, uopt$st.low, uopt$st.high, uopt$st.con, uopt$st.cut.o)
+  sto <- -stax(prod = oil, ep = op, uopt$royalr, uopt$st.low, uopt$st.high, uopt$st.con, uopt$st.cut.o)
 
   # Depletion
-  d <- -(ccs$Land/sum(moil))*model$oilp
+  d <- -(ccs$Land/sum(oil))*oil
 
   # Income taxes
-  TI <- osale+ro+sto+d+with(model, gsale+opPSS+opheat+fixed+D+rg+stg) # Taxable Income
+  TI <- osale+ro+sto+d+with(DCF, -D+Cv+Cf) # Taxable Income
   TI <- ifelse(TI < 0, 0, TI)                                         # Only keep positive values of TI
   TS <- -uopt$rTS*TI                                                   # State income taxes
   TF <- -uopt$rTF*(TI+TS)                                              # Federal income taxes
 
   # Administrative compensation
-  NP <- osale+ro+sto+TS+TF+with(model, gsale+rg+stg+opPSS+opheat+fixed+CTDC+CD+CWD+CSt+CWC)
+  NP <- osale+ro+sto+TS+TF+with(DCF, Cv+Cf+CTDC+WC+land+perm+RIP+start)
   admin.comp <- -uopt$radmin.comp*ifelse(NP > 0, NP, 0)
 
   # Final cash flow
-  CF <- osale+ro+sto+TS+TF+admin.comp+with(model, gsale+rg+stg+opPSS+opheat+fixed+CTDC+CD+CWD+CSt+CWC)
+  CF <- osale+ro+sto+TS+TF+admin.comp+with(DCF, Cv+Cf+CTDC+WC+land+perm+RIP+start)
 
   # Final NPV
-  NPV <- sum(model$df*CF)
+  NPV <- sum(DCF$df*CF)
 
   return(NPV)
 }
