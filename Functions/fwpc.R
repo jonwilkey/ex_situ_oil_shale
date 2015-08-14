@@ -24,21 +24,21 @@
 fwpc <- function(wmake) {
   
   # Constants for use in this function
-  pipeL <-    uopt$pipeL             # Pipeline length (mi)
-  elevD <-    uopt$elevD             # Elevation change (ft)
-  ENR.con <-  9412.25                # ENR construction cost index (Dec. 2012)
-  ENR.mat <-  2888.62                # ENR materials cost index (Dec. 2012)
-  plim <-     400                    # Maximum pipe operating pressure (psi)
-  FLB <-      0.35                   # Friction losses to fittings/bends
-  AFC <-      0.20                   # Annual fixed charge fraction
-  pse <-      1.50                   # Pipe scaling exponent
-  fins <-     1.40                   # Fittings/installation fraction
-  peff <-     0.72                   # Pump efficiency
-  pcost <-    0.74*(ENR.mat/1701.17) # Pipe cost ($/ft)
-  conx <-     1.1                    # Congestion multiplier
-  appx <-     1.053                  # Appurtenance multiplier
-  binstall <- 3.30                   # Base installation cost ($/inch/ft)
-  srip <-     0.90                   # soil ripability adjustment ($/inch/ft)
+  pipeL <-    uopt$pipeL                      # Pipeline length (mi)
+  elevD <-    uopt$elevD                      # Elevation change (ft)
+  ENR.con <-  9412.25                         # ENR construction cost index (Dec. 2012)
+  ENR.mat <-  2888.62                         # ENR materials cost index (Dec. 2012)
+  plim <-     400                             # Maximum pipe operating pressure (psi)
+  FLB <-      0.35                            # Friction losses to fittings/bends
+  AFC <-      0.20                            # Annual fixed charge fraction
+  pse <-      1.50                            # Pipe scaling exponent
+  fins <-     1.40                            # Fittings/installation fraction
+  peff <-     0.72                            # Pump efficiency
+  pcost <-    0.74*(ENR.mat/1701.17)*uopt$cpi # Pipe cost ($/ft)
+  conx <-     1.1                             # Congestion multiplier
+  appx <-     1.053                           # Appurtenance multiplier
+  binstall <- 3.30*uopt$cpi                   # Base installation cost ($/inch/ft)
+  srip <-     0.90*uopt$cpi                   # soil ripability adjustment ($/inch/ft)
   
   # Convert water flow rate to ft^3/s from kgal/yr
   wf <- wmake*1000*0.133680556/365/24/3600
@@ -50,7 +50,7 @@ fwpc <- function(wmake) {
   # Reynolds number for laminar case
   Re <- 4*998*wf/35.3146667/(pi*1.002*0.001*D.lam/39.3700787)
   
-  # check - is flow laminar? (i.e. Re < 2e3)
+  # Check - is flow laminar? (i.e. Re < 2e3)
   econD <- ifelse(test = Re < 2e3,
                   yes =  round(D.lam),
                   no =   round(D.turb))
@@ -78,7 +78,7 @@ fwpc <- function(wmake) {
   npump <- ceiling(head.p/plim)
   
   # Capital cost of pumping stations
-  cpum <- npump*46000*(wf*7.48051948*60/100)^0.75*(head.h/npump/300)^0.66*ENR.con/6300
+  cpum <- npump*46000*(wf*7.48051948*60/100)^0.75*(head.h/npump/300)^0.66*ENR.con/6300*uopt$cpi
   
   # Return results
   return(data.frame(cpipe = cpip+cpum, elec = elec))

@@ -26,10 +26,10 @@ NPV <- function(op) {
   osale <- oil*op
 
   # Royalties
-  ro <- -uopt$royalr*osale
+  ro <- -uopt$parR$royalr[j]*osale
 
   # Severance taxes
-  sto <- -stax(prod = oil, ep = op, uopt$royalr, uopt$st.low, uopt$st.high, uopt$st.con, uopt$st.cut.o)
+  sto <- -stax(prod = oil, ep = op, uopt$parR$royalr[j], uopt$st.low, uopt$st.high, uopt$st.con, uopt$st.cut.o)
 
   # Depletion
   d <- -(ccs$Land/sum(oil))*oil

@@ -75,121 +75,129 @@ options(stringsAsFactors=FALSE)
 source("UO_options.R")
 
 
-# 2.0 Read in simulation data ---------------------------------------------
-
-
-
 # Loop --------------------------------------------------------------------
 
 # Predefine results space
+oilSP <- rep(0, times = nrow(uopt$parR))
 
+# Progress Bar (since this next for-loop takes a while)
+pb <- txtProgressBar(min = 0, max = nrow(uopt$parR), width = 75, style = 3)
 
+# For each set of input parameter picks j
+for (j in 1:nrow(uopt$parR)) {
+  
+  # Mine and Retort ---------------------------------------------------------
+  
+  # Find amount of rock (i.e shale) mined and retorted in ton/day
+  rock.retort <- uopt$parR$OPD[j]/(uopt$parR$FA[j]*uopt$bmr$eff.retort/42)
+  rock.mined <-  rock.retort/uopt$bmr$eff.grind
+  
+  # Calculate scaling factors
+  RM <- rock.mined/uopt$bmr$smine      # Rock mined
+  RR <- rock.retort/uopt$bmr$sretort   # Rock retorted
+  O  <- uopt$parR$OPD[j]/uopt$bmr$poil # Oil produced
+  
+  # Capital costs
+  cMine <-   uopt$bmr$cmine*RM^0.6*(231.6/100)*uopt$cpi     # Mine
+  cRetort <- (uopt$bmr$cretort*RR^0.6+
+                uopt$bmr$cclean*O^0.6)*(577.4/297)*uopt$cpi # Retort
+  cMR <-     (cMine+cRetort)*uopt$parR$MRco[j]              # Total adjusted capital cost
+  
+  # Water
+  wcool <-  uopt$bmr$wcool*RM
+  wboil <-  uopt$bmr$wboil*RR
+  wgen <-   uopt$bmr$wgenR*RR+uopt$bmr$wgenO*O
+  wshale <- uopt$bmr$wshale*RM
+  steam <-  uopt$bmr$steam*RR
+  wmake <-  wshale+wcool+wboil+(wboil+(steam/2.20462/998*264.172052))*uopt$wrloss-wgen
+  
+  # Electricity
+  elec <- uopt$bmr$elec*RR
+  
+  # Operating cost (utilities)
+  opMine <-  uopt$bmr$opmine*RM*(231.6/100)*uopt$cpi*uopt$parR$MRco[j]                 # Mining
+  opElec <-  uopt$ep*elec*uopt$parR$MRco[j]                                            # Electricity
+  opSteam <- uopt$steamp*steam*uopt$parR$MRco[j]                                       # Steam
+  opWater <- (wmake*uopt$wmakep+wcool*uopt$wcoolp+wboil*uopt$wboilp)*uopt$parR$MRco[j] # Water
+  
+  # Mining Labor
+  mineWorkers <- ceiling(1.5791*rock.mined^0.5391)
+  mineLabor <-   mineWorkers*2080*30
+  
+  
+  # Utilities ---------------------------------------------------------------
+  
+  # Water pipeline
+  wpipe <- fwpc(wmake = wmake)
+  
+  # Water reservoir
+  cRes <- fres(wmake = wmake)
+  
+  # Final Utilities Capital cost
+  cUtility = (50*steam*1000/24/365*uopt$cpi+    # Steam plant ($50/lb/hr)
+              with(uopt, hubL*(eline+eswitch))+ # Electrical connection to grid
+              58*wcool*1000/365/24/60*uopt$cpi+ # Cooling water ($58/gpm)
+              wpipe$cpipe+                      # Water pipeline
+              cRes)                             # Water reservoir
+  
+  
+  # DCF Analysis ------------------------------------------------------------
+  
+  # Create DCF data.frame
+  DCF <- data.frame(p = c(rep(0,4),                             # Construction period, no production
+                          0.45,                                 # Startup year 1
+                          0.45+(uopt$p/365-0.45)/2,             # Startup year 2
+                          rep(uopt$p/365, uopt$parR$nyear[j]))) # Full scale production
+  
+  # Discount factor
+  DCF$df <- 1/((1+uopt$parR$IRR[j])^(1:nrow(DCF)))
+  
+  # Calcualte oil production
+  oil <- DCF$p*uopt$parR$OPD[j]*365
+  
+  # Get capital cost schedule
+  ccs <- fcap(cMR, cUtility, oil)
+  
+  # Capital investment vectors
+  DCF$CTDC <-  -ccs$TDC*c(rep(0.25, 4), rep(0, uopt$parR$nyear[j]+2))                        # Total Depreciable Capital
+  DCF$WC <-    ccs$WC*c(rep(0, 4), -1, rep(0, uopt$parR$nyear[j]), 1)                        # Working Capital
+  DCF$land <-  -ccs$Land*c(0, 1, rep(0, 4+uopt$parR$nyear[j]))                               # Land
+  DCF$perm <-  -ccs$Permit*c(1, rep(0, 5+uopt$parR$nyear[j]))                                # Permitting
+  DCF$RIP <-   -ccs$RIP*c(rep(0, 4), 1, rep(0, uopt$parR$nyear[j]+1))                        # Royalties for intellectual property
+  DCF$start <- -ccs$Start*c(rep(0, 4), 1, rep(0, uopt$parR$nyear[j]+1))                      # Startup
+  DCF$D <-     ccs$TDC*c(rep(0, 4), uopt$fD, rep(0, (uopt$parR$nyear[j]-length(uopt$fD)+2))) # Depreciation
+  
+  # Variable Costs
+  DCF$Cv <- (-DCF$p*(opElec+wpipe$elec*uopt$ep) # Electricity
+             -oil*uopt$rsp                      # Research spending
+             -DCF$p*opMine                      # Mining
+             -DCF$p*opSteam                     # Steam
+             -DCF$p*opWater)                    # Water
+  
+  # Fixed Costs
+  DCF$Cf <- c(rep(0, 4),
+              rep(-ffoc(Nopers =      uopt$Nopers,
+                        mineWorkers = mineWorkers,
+                        mineLabor =   mineLabor,
+                        fmaint =      uopt$parR$fmaint[j],
+                        CTDC =        ccs$TDC,
+                        CTPI =        ccs$TPI), uopt$parR$nyear[j]+2))  # ... added in here
+  
+  # Solve for oil price -----------------------------------------------------
+  
+  # Oil Supply Price
+  oilSP[j] <- uniroot(NPV, lower = 0, upper = 1e7)$root
+  
+  
+  # Save results ------------------------------------------------------------
+  
+  # Update progress bar
+  Sys.sleep(1e-3)
+  setTxtProgressBar(pb, j)
+}
 
-# Mine and Retort ---------------------------------------------------------
-
-# Find amount of rock (i.e shale) mined and retorted in ton/day
-rock.retort <- uopt$parR$OPD/(uopt$parR$FA*uopt$bmr$eff.retort/42)
-rock.mined <-  rock.retort/uopt$bmr$eff.grind
-
-# Calculate scaling factors
-RM <- rock.mined/uopt$bmr$smine    # Rock mined
-RR <- rock.retort/uopt$bmr$sretort # Rock retorted
-O  <- uopt$parR$OPD/uopt$bmr$poil
-
-# Capital costs
-cMine <-   uopt$bmr$cmine*  RM^0.6*(231.6/100)#(uopt$cpi/uopt$cpiB) # Mine
-cRetort <- (uopt$bmr$cretort*RR^0.6*(577.4/297)+#(uopt$cpi/uopt$cpiB) # Retort
-            uopt$bmr$cclean*O^0.6*(577.4/297))
-
-# Water
-wcool <-  uopt$bmr$wcool*RM
-wboil <-  uopt$bmr$wboil*RR
-wgen <-   uopt$bmr$wgenR*RR+uopt$bmr$wgenO*O
-wshale <- uopt$bmr$wshale*RM
-steam <-  uopt$bmr$steam*RR
-wmake <-  wshale+wcool+wboil+(wboil+(steam/2.20462/998*264.172052))*uopt$wrloss-wgen
-
-# Electricity
-elec <- uopt$bmr$elec*RR
-
-# Operating cost (utilities)
-opMine <-  uopt$bmr$opmine*RM*(231.6/100)#(uopt$cpi/uopt$cpiB) # Mining
-opElec <-  uopt$ep*elec                            # Electricity
-opSteam <- uopt$steamp*steam                       # Steam
-opWater <- wmake*uopt$wmakep+wcool*uopt$wcoolp+wboil*uopt$wboilp
-
-# Mining labor count
-mineWorkers <- ceiling(1.5791*rock.mined^0.5391)
-mineLabor <-   mineWorkers*2080*30
-
-
-# Utilities ---------------------------------------------------------------
-
-# Water pipeline
-wpipe <- fwpc(wmake = wmake)
-
-# Water reservoir
-cRes <- fres(wmake = wmake)
-
-# Final Utilities Capital cost
-cUtility = (50*steam*1000/24/365+             # Steam plant ($50/lb/hr)
-            with(uopt, hubL*(eline+eswitch))+ # Electrical connection to grid
-            58*wcool*1000/365/24/60+          # Cooling water ($58/gpm)
-            wpipe$cpipe+                      # Water pipeline
-              (elec+wpipe$elec)/365/24*203+
-            cRes)                             # Water reservoir
-
-
-# DCF Analysis ------------------------------------------------------------
-
-# Create DCF data.frame
-DCF <- data.frame(p = c(rep(0,4),                          # Construction period, no production
-                        0.45,                              # Startup year 1
-                        0.45+(uopt$p/365-0.45)/2,          # Startup year 2
-                        rep(uopt$p/365, uopt$parR$nyear))) # Full scale production
-
-# Discount factor
-DCF$df <- 1/((1+uopt$parR$IRR)^(1:nrow(DCF)))
-
-# Calcualte oil production
-oil <- DCF$p*50e3*365#DCF$p*uopt$parR$OPD*365
-
-# Get capital cost schedule
-ccs <- fcap(cMine, cRetort, cUtility, oil)
-
-# Capital investment vectors
-DCF$CTDC <-  -ccs$TDC*c(rep(0.25, 4), rep(0, uopt$parR$nyear+2))                        # Total Depreciable Capital
-DCF$WC <-    ccs$WC*c(rep(0, 4), -1, rep(0, uopt$parR$nyear), 1)                        # Working Capital
-DCF$land <-  -ccs$Land*c(0, 1, rep(0, 4+uopt$parR$nyear))                               # Land
-DCF$perm <-  -ccs$Permit*c(1, rep(0, 5+uopt$parR$nyear))                                # Permitting
-DCF$RIP <-   -ccs$RIP*c(rep(0, 4), 1, rep(0, uopt$parR$nyear+1))                        # Royalties for intellectual property
-DCF$start <- -ccs$Start*c(rep(0, 4), 1, rep(0, uopt$parR$nyear+1))                      # Startup
-DCF$D <-     ccs$TDC*c(rep(0, 4), uopt$fD, rep(0, (uopt$parR$nyear-length(uopt$fD)+2))) # Depreciation
-
-# Variable Costs
-DCF$Cv <- (-DCF$p*(opElec+wpipe$elec*uopt$ep) # Electricity
-           -oil*uopt$rsp                      # Research spending
-           -DCF$p*opMine                     # Mining
-           -DCF$p*opSteam                    # Steam
-           -DCF$p*opWater)                   # Water
-
-# Fixed Costs
-DCF$Cf <- c(rep(0, 4),
-            rep(-ffoc(Nopers = uopt$Nopers,
-                 mineWorkers = mineWorkers,
-                 mineLabor =   mineLabor,
-                 CTDC =        ccs$TDC,
-                 CTPI =        ccs$TPI), uopt$parR$nyear+2))  # ... added in here
-
-# Solve for oil price -----------------------------------------------------
-
-# Oil Supply Price
-oilSP <- uniroot(NPV, lower = 0, upper = 1e7)$root
-
-
-# Save results ------------------------------------------------------------
-
-
+# Close progress bar
+close(pb)
 
 # # Sound off when loop is complete
 # beep(3, message("Script Finished"))

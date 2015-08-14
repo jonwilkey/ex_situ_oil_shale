@@ -40,7 +40,7 @@ fres <- function(wmake) {
   sheet <-    1.81*resA
   
   # Total
-  total <- (excavate+truck+haul+backfill+compact+clay+sheet)*185.7/128.7 # Replace indices
+  total <- (excavate+truck+haul+backfill+compact+clay+sheet)*(185.7/128.7)*uopt$cpi
   
   # Return result
   return(total)
