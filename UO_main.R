@@ -51,6 +51,7 @@ flst <- file.path(path$fun, c("asYear.R",
                               "ffoc.R",
                               "stax.R",
                               "fNPV.R",
+                              "fCFterms.R",
                               "clipboard.R"))
 
 # Load each function in list then remove temporary file list variables
@@ -62,8 +63,8 @@ for (f in flst) source(f); remove(f, flst)
 library(zoo)
 library(sqldf)
 library(lhs)
-library(beepr)
 library(ggplot2)
+library(psych)
 
 
 # 1.4 Options -------------------------------------------------------------
@@ -78,7 +79,29 @@ source("UO_options.R")
 # Loop --------------------------------------------------------------------
 
 # Predefine results space
-oilSP <- rep(0, times = nrow(uopt$parR))
+oilSP <-     rep(0, times = nrow(uopt$parR))
+Toil <-      oilSP
+CPFB <-      oilSP
+TCI <-       oilSP
+fc.mine <-   oilSP
+fc.reto <-   oilSP
+fc.site <-   oilSP
+fc.serv <-   oilSP
+fc.util <-   oilSP
+fc.cont <-   oilSP
+fc.land <-   oilSP
+fc.permit <- oilSP
+fc.RIP <-    oilSP
+fc.start <-  oilSP
+fc.WC <-     oilSP
+pb.cap <-    oilSP
+pb.loai <-   oilSP
+pb.rstp <-   oilSP
+pb.royl <-   oilSP
+pb.tfts <-   oilSP
+pb.mine <-   oilSP
+pb.reto <-   oilSP
+pb.prof <-   oilSP
 
 # Progress Bar (since this next for-loop takes a while)
 pb <- txtProgressBar(min = 0, max = nrow(uopt$parR), width = 75, style = 3)
@@ -174,6 +197,9 @@ for (j in 1:nrow(uopt$parR)) {
              -DCF$p*opSteam                     # Steam
              -DCF$p*opWater)                    # Water
   
+  # Calculate fine variable cost fraction
+  fracMine <- opMine/(opMine+opSteam+opElec+wpipe$elec*uopt$ep+opWater)
+  
   # Fixed Costs
   DCF$Cf <- c(rep(0, 4),
               rep(-ffoc(Nopers =      uopt$Nopers,
@@ -189,6 +215,42 @@ for (j in 1:nrow(uopt$parR)) {
   oilSP[j] <- uniroot(NPV, lower = 0, upper = 1e7)$root
   
   
+  # Calculate $/bbl cash flows ----------------------------------------------
+  
+  # Capital cost fractions
+  fc.mine[j] <-   cMine/ccs$TCI         # Mine
+  fc.reto[j] <-   cRetort/ccs$TCI       # Retort
+  fc.site[j] <-   with(ccs, Site/TCI)   # Site
+  fc.serv[j] <-   with(ccs, Serv/TCI)   # Service facilities
+  fc.util[j] <-   with(ccs, capU/TCI)   # Utilities
+  fc.cont[j] <-   with(ccs, Cont/TCI)   # Contingency
+  fc.land[j] <-   with(ccs, Land/TCI)   # Land
+  fc.permit[j] <- with(ccs, Permit/TCI) # Permitting
+  fc.RIP[j] <-    with(ccs, RIP/TCI)    # Royalties for intellectual property
+  fc.start[j] <-  with(ccs, Start/TCI)  # Startup
+  fc.WC[j] <-     with(ccs, WC/TCI)     # Working capital
+  
+  # Run fCFterms function to get terms in cash flow equation that depend on oil
+  CF <- fCFterms(oilSP[j])
+  
+  # Per barrel
+  pb.cap[j] <-  with(DCF, sum(CTDC+land+RIP+perm+start))/sum(oil)                            # Capital
+  pb.loai[j] <- (sum(DCF$Cf)+sum(0.01*ccs$TPI)+sum(CF$admin.comp))/sum(oil)                  # Labor, maint., overhead, admin salary + comp, insurance
+  pb.rstp[j] <- (sum(with(CF, ro+sto+TS+TF))-sum(0.01*ccs$TPI))/sum(oil)                     # Royalties, serverance, income tax, and property taxes
+  pb.royl[j] <- sum(CF$ro)/sum(oil)                                                          # Royalties only
+  pb.tfts[j] <- sum(with(CF, TS+TF))/sum(oil)                                                # Taxes only
+  pb.mine[j] <- sum(DCF$Cv)*fracMine/sum(oil)                                                # Electrical heating cost
+  pb.reto[j] <- sum(DCF$Cv)*(1-fracMine)/sum(oil)                                            # Product separation and storage cost
+  pb.prof[j] <- sum(CF$osale)/sum(oil)+pb.cap[j]+pb.loai[j]+pb.rstp[j]+pb.mine[j]+pb.reto[j] # Net profit
+  
+  
+  # Save results ------------------------------------------------------------
+  
+  Toil[j] <-  sum(oil)
+  TCI[j] <-   ccs$TCI
+  CPFB[j] <-  ccs$TCI/(uopt$parR$OPD[j])
+  
+  
   # Save results ------------------------------------------------------------
   
   # Update progress bar
@@ -199,9 +261,30 @@ for (j in 1:nrow(uopt$parR)) {
 # Close progress bar
 close(pb)
 
-# # Sound off when loop is complete
-# beep(3, message("Script Finished"))
-# 
-# # ... and really save results
-# results <- data.frame()
-# save(results, file = file.path(path$data, "exshale Results v1.rda"))
+# ... and really save results
+results <- data.frame(uopt$parR,
+                      oilSP,
+                      Toil,
+                      TCI,
+                      CPFB,
+                      fc.mine,
+                      fc.reto,
+                      fc.site,
+                      fc.serv,
+                      fc.util,
+                      fc.cont,
+                      fc.land,
+                      fc.permit,
+                      fc.RIP,
+                      fc.start,
+                      fc.WC,
+                      pb.cap,
+                      pb.loai,
+                      pb.rstp,
+                      pb.royl,
+                      pb.tfts,
+                      pb.mine,
+                      pb.reto,
+                      pb.prof)
+
+save(results, file = file.path(path$data, "exshale Results v2.rda"))
