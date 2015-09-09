@@ -18,8 +18,10 @@ path <- NULL
 
 # Path switch - uncomment and/or replace with the path directory for your local
 # copy of the Git repository and Dropbox files.
-pwd.drop <- "C:/Users/jonwi/"
-pwd.git  <- "C:/Users/jonwi/Documents/R/"
+# pwd.drop <- "C:/Users/jonwi/"                #  Desktop
+# pwd.git  <- "C:/Users/jonwi/Documents/R/"
+pwd.drop <- "C:/Users/Jon Wilkey/"
+pwd.git  <- "C:/Users/Jon Wilkey/Documents/R/" # Laptop
 
 # Define paths.
 # "raw"  is raw data (*.dbf files from DOGM, *.csv files, etc.).
