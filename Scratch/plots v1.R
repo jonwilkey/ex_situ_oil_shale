@@ -184,3 +184,25 @@ cpr <- data.frame(rmean = test$r[,8], pmean = test$p[,8])
 # Drop last row and round r value
 cpr <- cpr[-8,]
 cpr$rmean <- round(cpr$rmean,2)
+
+
+
+# Regression analysis -----------------------------------------------------
+
+test <- lm(oilSP ~ FA+OPD+nyear+MRco+royalr+fmaint+IRR-1, results)
+
+mtv <- with(results, c(median(FA),
+                       median(OPD),
+                       median(nyear),
+                       median(MRco),
+                       median(royalr),
+                       median(fmaint),
+                       median(IRR)))
+
+pdf(file.path(path$plot, "relative OSP barplot.pdf"))
+barplot(mtv*coefficients(test)/max(mtv*coefficients(test)),
+        ylim = c(-1,1),
+        ylab = "Relative OSP Impact",
+        xlab = "Input Variable",
+        names.arg = c("FA", "OPD", "nyear", "MRco", "royalr", "fmaint", "IRR"))
+dev.off()

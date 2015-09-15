@@ -52,6 +52,7 @@ flst <- file.path(path$fun, c("asYear.R",
                               "stax.R",
                               "fNPV.R",
                               "fCFterms.R",
+                              "multiplot.R",
                               "clipboard.R"))
 
 # Load each function in list then remove temporary file list variables
@@ -64,7 +65,6 @@ library(zoo)
 library(sqldf)
 library(lhs)
 library(ggplot2)
-library(psych)
 
 
 # 1.4 Options -------------------------------------------------------------
