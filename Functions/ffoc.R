@@ -17,6 +17,8 @@
 
 # CTPI - total permanent investment
 
+# salary - Annual salary of TA and CL staff
+
 
 # Outputs -----------------------------------------------------------------
 
@@ -30,22 +32,22 @@
 
 
 # Function ----------------------------------------------------------------
-ffoc <- function(Nopers, mineWorkers, mineLabor, fmaint, CTDC, CTPI) {
+ffoc <- function(Nopers, mineWorkers, mineLabor, fmaint, CTDC, CTPI, salary) {
 
   # Labor for operations
-  LW <-   Nopers*5*2080*30 # Labor wages
-  LS <-   0.15*LW          # Labor salaries
-  opSS <- 0.06*LW          # Operating supplies and services
-  TA <-   65e3*5           # Technical assistance
-  CL <-   71e3*5           # Control laboratory
-  L <-    LW+LS+opSS+TA+CL+mineLabor
+  LW <-   Nopers*5*2080*30           # Labor wages
+  LS <-   0.15*LW                    # Labor salaries
+  opSS <- 0.06*LW                    # Operating supplies and services
+  TA <-   salary*5                   # Technical assistance
+  CL <-   salary*5                   # Control laboratory
+  L <-    LW+LS+opSS+TA+CL+mineLabor # Total labor
 
   # Maintenance
-  M <-   fmaint*CTDC  # Maintenance
-  MW <-  1/2.3*M    # Maint. wages
-  MS <-  0.25/2.3*M # Maint. salaries
-  MMS <- 1/2.3*M    # Maint. materials
-  MO <-  0.05/2.3*M # Maint. overhead
+  M <-   fmaint*CTDC # Maintenance
+  MW <-  1/2.3*M     # Maint. wages
+  MS <-  0.25/2.3*M  # Maint. salaries
+  MMS <- 1/2.3*M     # Maint. materials
+  MO <-  0.05/2.3*M  # Maint. overhead
 
   # Operating Overhead
   GPO <-      0.071*(LS+LW+MW+MS) # General plant overhead

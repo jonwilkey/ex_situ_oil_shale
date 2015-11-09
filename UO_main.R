@@ -18,10 +18,10 @@ path <- NULL
 
 # Path switch - uncomment and/or replace with the path directory for your local
 # copy of the Git repository and Dropbox files.
-# pwd.drop <- "C:/Users/jonwi/"                #  Desktop
-# pwd.git  <- "C:/Users/jonwi/Documents/R/"
-pwd.drop <- "C:/Users/Jon Wilkey/"
-pwd.git  <- "C:/Users/Jon Wilkey/Documents/R/" # Laptop
+pwd.drop <- "C:/Users/jonwi/"                #  Desktop
+pwd.git  <- "C:/Users/jonwi/Documents/R/"
+# pwd.drop <- "C:/Users/Jon Wilkey/"
+# pwd.git  <- "C:/Users/Jon Wilkey/Documents/R/" # Laptop
 
 # Define paths.
 # "raw"  is raw data (*.dbf files from DOGM, *.csv files, etc.).
@@ -55,6 +55,7 @@ flst <- file.path(path$fun, c("asYear.R",
                               "fNPV.R",
                               "fCFterms.R",
                               "multiplot.R",
+                              "logGrid.R",
                               "clipboard.R"))
 
 # Load each function in list then remove temporary file list variables
@@ -67,6 +68,8 @@ library(zoo)
 library(sqldf)
 library(lhs)
 library(ggplot2)
+library(AlgDesign)
+library(beepr)
 
 
 # 1.4 Options -------------------------------------------------------------
@@ -105,6 +108,12 @@ pb.mine <-   oilSP
 pb.reto <-   oilSP
 pb.prof <-   oilSP
 
+# Print and save start time for MC simulation
+writeLines(c("",
+             "Running Simulation",
+             paste("Start time:",Sys.time())))
+runstart <- Sys.time()
+
 # Progress Bar (since this next for-loop takes a while)
 pb <- txtProgressBar(min = 0, max = nrow(uopt$parR), width = 75, style = 3)
 
@@ -126,7 +135,7 @@ for (j in 1:nrow(uopt$parR)) {
   cMine <-   uopt$bmr$cmine*RM^0.6*(231.6/100)*uopt$cpi     # Mine
   cRetort <- (uopt$bmr$cretort*RR^0.6+
                 uopt$bmr$cclean*O^0.6)*(577.4/297)*uopt$cpi # Retort
-  cMR <-     (cMine+cRetort)*uopt$parR$MRco[j]              # Total adjusted capital cost
+  cMR <-     (cMine+cRetort)*uopt$parR$MRc[j]              # Total adjusted capital cost
   
   # Water
   wcool <-  uopt$bmr$wcool*RM
@@ -140,10 +149,10 @@ for (j in 1:nrow(uopt$parR)) {
   elec <- uopt$bmr$elec*RR
   
   # Operating cost (utilities)
-  opMine <-  uopt$bmr$opmine*RM*(231.6/100)*uopt$cpi*uopt$parR$MRco[j]                 # Mining
-  opElec <-  uopt$ep*elec*uopt$parR$MRco[j]                                            # Electricity
-  opSteam <- uopt$steamp*steam*uopt$parR$MRco[j]                                       # Steam
-  opWater <- (wmake*uopt$wmakep+wcool*uopt$wcoolp+wboil*uopt$wboilp)*uopt$parR$MRco[j] # Water
+  opMine <-  uopt$bmr$opmine*RM*(231.6/100)*uopt$cpi*uopt$parR$MRo[j]                 # Mining
+  opElec <-  uopt$ep*elec*uopt$parR$MRo[j]                                            # Electricity
+  opSteam <- uopt$steamp*steam*uopt$parR$MRo[j]                                       # Steam
+  opWater <- (wmake*uopt$wmakep+wcool*uopt$wcoolp+wboil*uopt$wboilp)*uopt$parR$MRo[j] # Water
   
   # Mining Labor
   mineWorkers <- ceiling(1.5791*rock.mined^0.5391)
@@ -172,7 +181,7 @@ for (j in 1:nrow(uopt$parR)) {
   DCF <- data.frame(p = c(rep(0,4),                             # Construction period, no production
                           0.45,                                 # Startup year 1
                           0.45+(uopt$p/365-0.45)/2,             # Startup year 2
-                          rep(uopt$p/365, uopt$parR$nyear[j]))) # Full scale production
+                          rep(uopt$p/365, uopt$nyear))) # Full scale production
   
   # Discount factor
   DCF$df <- 1/((1+uopt$parR$IRR[j])^(1:nrow(DCF)))
@@ -184,13 +193,13 @@ for (j in 1:nrow(uopt$parR)) {
   ccs <- fcap(cMR, cUtility, oil)
   
   # Capital investment vectors
-  DCF$CTDC <-  -ccs$TDC*c(rep(0.25, 4), rep(0, uopt$parR$nyear[j]+2))                        # Total Depreciable Capital
-  DCF$WC <-    ccs$WC*c(rep(0, 4), -1, rep(0, uopt$parR$nyear[j]), 1)                        # Working Capital
-  DCF$land <-  -ccs$Land*c(0, 1, rep(0, 4+uopt$parR$nyear[j]))                               # Land
-  DCF$perm <-  -ccs$Permit*c(1, rep(0, 5+uopt$parR$nyear[j]))                                # Permitting
-  DCF$RIP <-   -ccs$RIP*c(rep(0, 4), 1, rep(0, uopt$parR$nyear[j]+1))                        # Royalties for intellectual property
-  DCF$start <- -ccs$Start*c(rep(0, 4), 1, rep(0, uopt$parR$nyear[j]+1))                      # Startup
-  DCF$D <-     ccs$TDC*c(rep(0, 4), uopt$fD, rep(0, (uopt$parR$nyear[j]-length(uopt$fD)+2))) # Depreciation
+  DCF$CTDC <-  -ccs$TDC*c(rep(0.25, 4), rep(0, uopt$nyear+2))                        # Total Depreciable Capital
+  DCF$WC <-    ccs$WC*c(rep(0, 4), -1, rep(0, uopt$nyear), 1)                        # Working Capital
+  DCF$land <-  -ccs$Land*c(0, 1, rep(0, 4+uopt$nyear))                               # Land
+  DCF$perm <-  -ccs$Permit*c(1, rep(0, 5+uopt$nyear))                                # Permitting
+  DCF$RIP <-   -ccs$RIP*c(rep(0, 4), 1, rep(0, uopt$nyear+1))                        # Royalties for intellectual property
+  DCF$start <- -ccs$Start*c(rep(0, 4), 1, rep(0, uopt$nyear+1))                      # Startup
+  DCF$D <-     ccs$TDC*c(rep(0, 4), uopt$fD, rep(0, (uopt$nyear-length(uopt$fD)+2))) # Depreciation
   
   # Variable Costs
   DCF$Cv <- (-DCF$p*(opElec+wpipe$elec*uopt$ep) # Electricity
@@ -207,9 +216,10 @@ for (j in 1:nrow(uopt$parR)) {
               rep(-ffoc(Nopers =      uopt$Nopers,
                         mineWorkers = mineWorkers,
                         mineLabor =   mineLabor,
-                        fmaint =      uopt$parR$fmaint[j],
+                        fmaint =      uopt$fmaint,
                         CTDC =        ccs$TDC,
-                        CTPI =        ccs$TPI), uopt$parR$nyear[j]+2))  # ... added in here
+                        CTPI =        ccs$TPI,
+                        salary =      uopt$salary), uopt$nyear+2))  # ... added in here
   
   # Solve for oil price -----------------------------------------------------
   
@@ -263,6 +273,17 @@ for (j in 1:nrow(uopt$parR)) {
 # Close progress bar
 close(pb)
 
+# Print stop time for MC simulation section
+writeLines(c("",
+             paste("Finished simulation at:", Sys.time()),
+             paste("Elapsed time:", format(difftime(Sys.time(), runstart)))))
+
+# Print finished message and play sound - feel free to replace with your
+# preferred sound, see help for function by typing "?beep" in console
+beep(3)
+writeLines(c("",
+             "Model run complete"))
+
 # ... and really save results
 results <- data.frame(uopt$parR,
                       oilSP,
@@ -289,4 +310,4 @@ results <- data.frame(uopt$parR,
                       pb.reto,
                       pb.prof)
 
-save(results, file = file.path(path$data, "exshale Results v2.rda"))
+save(results, file = file.path(path$data, "ExShale results qunif v3.rda"))

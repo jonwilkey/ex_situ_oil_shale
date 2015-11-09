@@ -36,9 +36,9 @@ NPV <- function(op) {
 
   # Income taxes
   TI <- osale+ro+sto+d+with(DCF, -D+Cv+Cf) # Taxable Income
-  TI <- ifelse(TI < 0, 0, TI)                                         # Only keep positive values of TI
-  TS <- -uopt$rTS*TI                                                   # State income taxes
-  TF <- -uopt$rTF*(TI+TS)                                              # Federal income taxes
+  TI <- ifelse(TI < 0, 0, TI)              # Only keep positive values of TI
+  TS <- -uopt$rTS*TI                       # State income taxes
+  TF <- -uopt$rTF*(TI+TS)                  # Federal income taxes
 
   # Administrative compensation
   NP <- osale+ro+sto+TS+TF+with(DCF, Cv+Cf+CTDC+WC+land+perm+RIP+start)
