@@ -310,4 +310,4 @@ results <- data.frame(uopt$parR,
                       pb.reto,
                       pb.prof)
 
-save(results, file = file.path(path$data, "ExShale results qunif v3.rda"))
+save(results, file = file.path(path$data, paste("exshale Results ", uopt$ver, ".rda", sep = "")))

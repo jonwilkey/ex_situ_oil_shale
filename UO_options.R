@@ -19,10 +19,13 @@ uopt <- NULL
 # Version History ---------------------------------------------------------
 
 # Version #
-uopt$ver <- "v3"
+uopt$ver <- "v4"
+
+# v4
+# - Normal full factorial space
 
 # v3
-# - For journal article
+# - Uniform full factorial space
 
 # v2
 # - What went into NETL presentation in September
@@ -30,24 +33,58 @@ uopt$ver <- "v3"
 
 # Parameter Space Generation ----------------------------------------------
 
-# Factorial design
-parLHS <- (gen.factorial(levels = 11, nVars = 6, center = F)-1)/10
+# Switch - use uniform space?
+uspace <- F
 
-# # Latin Hypercube Design
-# parLHS <- randomLHS(n = 1e4, k = 7)
-
-# Get parameter values from parLHS
-
-# For uniform distribution
-uopt$parR <- data.frame(FA =     qunif(parLHS[,1], min = 10,   max = 70),    # Fischer-assay (gal oil / ton shale)
-                        OPD =    qunif(parLHS[,2], min = 10e3, max = 100e3), # Oil production rate (BPD)
-                        MRc =    qunif(parLHS[,3], min = 0.5,  max = 1.5),   # Mine & Retort cap expense fraction
-                        MRo =    qunif(parLHS[,4], min = 0.5,  max = 1.5),   # Mine & Retort op expense fraction
-                        royalr = qunif(parLHS[,5], min = 0.05, max = 0.20),  # Royalty rate
-                        IRR =    qunif(parLHS[,6], min = 0.10, max = 0.40))  # Internal rate of return
+if (uspace == T) {
+  
+  # Factorial design
+  parLHS <- (gen.factorial(levels = 11, nVars = 6, center = F)-1)/10
+  
+  # # Latin Hypercube Design
+  # parLHS <- randomLHS(n = 1e4, k = 7)
+  
+  # Get parameter values from parLHS
+  
+  # For uniform distribution
+  uopt$parR <- data.frame(FA =     qunif(parLHS[,1], min = 10,   max = 70),    # Fischer-assay (gal oil / ton shale)
+                          OPD =    qunif(parLHS[,2], min = 10e3, max = 100e3), # Oil production rate (BPD)
+                          MRc =    qunif(parLHS[,3], min = 0.5,  max = 1.5),   # Mine & Retort cap expense fraction
+                          MRo =    qunif(parLHS[,4], min = 0.5,  max = 1.5),   # Mine & Retort op expense fraction
+                          royalr = qunif(parLHS[,5], min = 0.05, max = 0.20),  # Royalty rate
+                          IRR =    qunif(parLHS[,6], min = 0.10, max = 0.40))  # Internal rate of return
+} else {
+  
+  # Generate factorial design
+  parLHS <- (gen.factorial(levels = 11, nVars = 6, center = F))
+  
+  # Turn into a vector
+  parLHS <- c(parLHS[, 1], parLHS[, 2], parLHS[, 3], parLHS[, 4], parLHS[, 5], parLHS[, 6])
+  
+  # Define quantile sequene
+  probs <- seq(0.05, 0.95, 0.09)
+  
+  # For each quantile
+  for (i in 1:length(probs)) {
+    
+    # Replace level value in parLHS
+    parLHS[which(parLHS == i)] <- probs[i]
+  }
+  
+  # Convert back into matrix
+  parLHS <- matrix(parLHS, ncol = 6)
+  
+  # Find actual values for normal distibution with specified mean and SD
+  uopt$parR <- data.frame(FA =     qnorm(parLHS[,1], mean = 25,    sd = 10),     # Fischer-assay (gal oil / ton shale)
+                          OPD =    qnorm(parLHS[,2], mean = 50e3,  sd = 25e3),   # Oil production rate (BPD)
+                          MRc =    qnorm(parLHS[,3], mean = 1.0,   sd = 0.25),   # Mine & Retort cap expense fraction
+                          MRo =    qnorm(parLHS[,4], mean = 1.0,   sd = 0.25),   # Mine & Retort op expense fraction
+                          royalr = qnorm(parLHS[,5], mean = 0.125, sd = 0.0375), # Royalty rate
+                          IRR =    qnorm(parLHS[,6], mean = 0.15,  sd = 0.05))   # Internal rate of return
+}
 
 # Remove LHS
-remove(parLHS)
+remove(parLHS, uspace)
 
 
 # Index Values ------------------------------------------------------------

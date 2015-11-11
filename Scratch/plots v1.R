@@ -19,14 +19,14 @@ eia.op$op <- eia.op$op * (uopt$cpi * 229.594 / 232.957)
 
 price.cut <- mean(eia.op$op[eia.op$year >= 2015])
 
-# Repeat for reference price forecast
-eia.op <- read.csv(file.path(path$raw, "EIA2015AEO refoilOP.csv"), skip = 4)
-names(eia.op) <- c("year", "op")
-
-# Prices are in 2013 dollars (CPI = 232.957), adjust to 2014 USD
-eia.op$op <- eia.op$op * (uopt$cpi * 229.594 / 232.957)
-
-price.cut.ref <- mean(eia.op$op[eia.op$year >= 2015])
+# # Repeat for reference price forecast
+# eia.op <- read.csv(file.path(path$raw, "EIA2015AEO refoilOP.csv"), skip = 4)
+# names(eia.op) <- c("year", "op")
+# 
+# # Prices are in 2013 dollars (CPI = 232.957), adjust to 2014 USD
+# eia.op$op <- eia.op$op * (uopt$cpi * 229.594 / 232.957)
+# 
+# price.cut.ref <- mean(eia.op$op[eia.op$year >= 2015])
 
 
 # Hexbin multiplot function -----------------------------------------------
@@ -49,59 +49,47 @@ theme_bw_noy <- function (base_size = 12, base_family = "") {
 multi.xyhex <- function(r, logflag, n) {
   
   fFA <- ggplot(r, aes(x = FA, y = oilSP)) +
-    # stat_binhex(bins = bs) +
-    # stat_density2d(n = n, aes(fill = ..level..), geom = "polygon") +
-    stat_bin2d(bins = 11) +
+    stat_bin2d(breaks = list(x = sort(unique(r$FA)), y = seq(min(r$oilSP), max(r$oilSP), length = n))) + 
     scale_fill_gradientn(colours = c("lightgrey","black")) +
     theme_bw() +
-    xlab("Fischer Assay (GPT)") +
+    xlab("G (gal/ton)") +
     ylab("OSP ($ / bbl)") +
     guides(fill = FALSE)
   
   fOPD <- ggplot(r, aes(x = OPD/1e3, y = oilSP)) +
-    # stat_binhex(bins = bs) +
-    # stat_density2d(n = n, aes(fill = ..level..), geom = "polygon") +
-    stat_bin2d(bins = n) +
+    stat_bin2d(breaks = list(x = sort(unique(r$OPD)/1e3), y = seq(min(r$oilSP), max(r$oilSP), length = n))) +
     scale_fill_gradientn(colours = c("lightgrey","black")) +
     theme_bw() +
-    xlab("Scale (thousand BPD)") +
+    xlab("OPD (thousand BPD)") +
     ylab("OSP ($ / bbl)") +
     guides(fill = FALSE)
   
   fMRc <- ggplot(r, aes(x = MRc, y = oilSP)) +
-    # stat_binhex(bins = bs) +
-    # stat_density2d(n = n, aes(fill = ..level..), geom = "polygon") +
-    stat_bin2d(bins = n) +
+    stat_bin2d(breaks = list(x = sort(unique(r$MRc)), y = seq(min(r$oilSP), max(r$oilSP), length = n))) +
     scale_fill_gradientn(colours = c("lightgrey","black")) +
     theme_bw() +
-    xlab("Mine+Retort Capex (%)") +
+    xlab(expression(f[cap])) +
     ylab("OSP ($ / bbl)") +
     guides(fill = FALSE)
   
   fMRo <- ggplot(r, aes(x = MRo, y = oilSP)) +
-    # stat_binhex(bins = bs) +
-    # stat_density2d(n = n, aes(fill = ..level..), geom = "polygon") +
-    stat_bin2d(bins = n) +
+    stat_bin2d(breaks = list(x = sort(unique(r$MRo)), y = seq(min(r$oilSP), max(r$oilSP), length = n))) +
     scale_fill_gradientn(colours = c("lightgrey","black")) +
     theme_bw_noy() +
-    xlab("Mine+Retort Opex (%)") +
+    xlab(expression(f[op])) +
     ylab("OSP ($ / bbl)") +
     guides(fill = FALSE)
   
   froyalr <- ggplot(r, aes(x = royalr, y = oilSP)) +
-    # stat_binhex(bins = bs) +
-    # stat_density2d(n = n, aes(fill = ..level..), geom = "polygon") +
-    stat_bin2d(bins = n) +
+    stat_bin2d(breaks = list(x = sort(unique(r$royalr)), y = seq(min(r$oilSP), max(r$oilSP), length = n))) +
     scale_fill_gradientn(colours = c("lightgrey","black")) +
     theme_bw_noy() +
-    xlab("Royalty Rate (%)") +
+    xlab("r") +
     ylab("OSP ($ / bbl)") +
     guides(fill = FALSE)
   
   fIRR <- ggplot(r, aes(x = IRR, y = oilSP)) +
-    # stat_binhex(bins = bs) +
-    # stat_density2d(n = n, aes(fill = ..level..), geom = "polygon") +
-    stat_bin2d(bins = n) +
+    stat_bin2d(breaks = list(x = sort(unique(r$IRR)), y = seq(min(r$oilSP), max(r$oilSP), length = n))) +
     scale_fill_gradientn(colours = c("lightgrey","black")) +
     theme_bw_noy() +
     xlab("IRR") +
@@ -115,19 +103,20 @@ multi.xyhex <- function(r, logflag, n) {
 # Plot OSP hexbin ---------------------------------------------------------
 
 # Plot full dataset
-pdf(file.path(path$plot, "xy full multi qunif v3.pdf"), width = 7, height = 7*4/3)
-multi.xyhex(r = results, logflag = TRUE, n = 11)
+pdf(file.path(path$plot, paste("xyhex full ", uopt$ver, ".pdf", sep = "")), width = 7, height = 7*4/3)
+# tiff(file.path(path$plot, paste("xyhex full ", uopt$ver, ".tif", sep = "")), width = 480*300/72, height = 480*300/72*4/3, res = 300)
+multi.xyhex(r = results, logflag = TRUE, n = 9)
 dev.off()
 
 # Plot reduced results
-pdf(file.path(path$plot, "xyhex reduced qunif v3.pdf"), width = 7, height = 7*4/3)
-multi.xyhex(r = results[results$oilSP <= price.cut.ref,], logflag = FALSE, n = 11)
+pdf(file.path(path$plot, paste("xyhex reduced ", uopt$ver, ".pdf", sep = "")), width = 7, height = 7*4/3)
+multi.xyhex(r = results[results$oilSP <= price.cut,], logflag = FALSE, n = 13)
 dev.off()
 
 
 # Boxplots for economically viable set ------------------------------------
 
-r <- results#[results$oilSP <= price.cut.ref,]
+r <- results[results$oilSP <= price.cut,]
 
 # Reshape
 bdr <- rbind(data.frame(type = as.factor("CTPI"),   cost = (-r$pb.cap)),
@@ -141,7 +130,7 @@ bdr <- rbind(data.frame(type = as.factor("CTPI"),   cost = (-r$pb.cap)),
 # Drop any negatives
 bdr <- bdr[bdr$cost >= 0,]
 
-pdf(file.path(path$plot, "costs per bbl qunif v3.pdf"))
+pdf(file.path(path$plot, paste("cost per bbl ", uopt$ver, ".pdf", sep = "")))
 
 boxplot(cost~type, bdr,
         range = 0,
@@ -180,7 +169,7 @@ cdrc <- rbind(data.frame(type = as.factor("mine"),   frac = r$fc.mine*r$TCI),
               data.frame(type = as.factor("start"),  frac = r$fc.start*r$TCI),
               data.frame(type = as.factor("WC"),     frac = r$fc.WC*r$TCI))
 
-pdf(file.path(path$plot, "capital cost boxplot qunif v3.pdf"))
+pdf(file.path(path$plot, paste("capital cost boxplot ", uopt$ver, ".pdf", sep = "")))
 
 boxplot(frac~type, cdrc,
         range = 0,
@@ -212,15 +201,15 @@ dev.off()
 
 # Tables ------------------------------------------------------------------
 
-# Correlation coefficient
-test <- corr.test(results[,1:8])
-
-# Make table
-cpr <- data.frame(rmean = test$r[,8], pmean = test$p[,8])
-
-# Drop last row and round r value
-cpr <- cpr[-8,]
-cpr$rmean <- round(cpr$rmean,2)
+# # Correlation coefficient
+# test <- corr.test(results[,1:8])
+# 
+# # Make table
+# cpr <- data.frame(rmean = test$r[,8], pmean = test$p[,8])
+# 
+# # Drop last row and round r value
+# cpr <- cpr[-8,]
+# cpr$rmean <- round(cpr$rmean,2)
 
 
 # Regression analysis -----------------------------------------------------
@@ -234,10 +223,27 @@ mtv <- with(results, c(median(FA),
                        median(royalr),
                        median(IRR)))
 
-pdf(file.path(path$plot, "relative OSP barplot qunif v3.pdf"))
+pdf(file.path(path$plot, paste("relative OSP ", uopt$ver, ".pdf", sep = "")))
 barplot(mtv*coefficients(test)/max(mtv*coefficients(test)),
         ylim = c(-1,1),
         ylab = "Relative OSP Impact",
-        xlab = "Input Variable",
-        names.arg = c("FA", "OPD", "MRc", "MRo", "royalr", "IRR"))
+        xlab = "Input Parameter",
+        names.arg = c("G", "OPD", expression(f[cap]), expression(f[op]), "r", "IRR"))
+dev.off()
+
+
+# Log-normal fit ----------------------------------------------------------
+
+test <- fitdist(results$oilSP, "lnorm")
+
+pdf(file.path(path$plot, "lnorm denscomp v3.pdf"))
+denscomp(ft = test,
+         ylim = c(0, 0.0125),
+         demp = T,
+         dempcol = "blue",
+         xlab = "OSP ($ / bbl)",
+         ylab = "Probability Density",
+         addlegend = F,
+         main = NA)
+legend("right", c("Log-Normal Fit", "Empirical PDF"), col = c("red", "blue"), lty = 1)
 dev.off()
