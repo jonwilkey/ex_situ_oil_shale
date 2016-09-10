@@ -1,0 +1,83 @@
+%%%% Preamble %%%%
+\documentclass[preprint, authoryear]{elsarticle}
+\usepackage[hidelinks]{hyperref}
+\usepackage{lineno}
+\modulolinenumbers[5]
+\journal{Energy Economics}
+\bibliographystyle{elsarticle-harv}
+
+
+\begin{document}
+
+% R Sweave options
+\SweaveOpts{concordance=TRUE}
+
+%%%% Front Matter %%%%
+\begin{frontmatter}
+
+\title{Economic Evaluation of Ex  Situ Oil Shale Processing}
+
+% Authors
+\author[icse]{Jonathan E. Wilkey\corref{cor1}}
+\ead{jon.wilkey@gmail.com}
+
+\author[icse]{Jennifer P. Spinti}
+
+\author[icse]{Terry A. Ring}
+
+\cortext[cor1]{Corresponding author}
+
+\address[icse]{Institute for Clean and Secure Energy, 155 South 1452 East, Room 350, Salt Lake City, UT 84112, United States}
+
+\begin{abstract}
+
+U.S. oil shale deposits could become an enormous source of oil if a technically and economically feasible processing method can be developed and demonstrated. While the technical feasibility of a variety of ex situ processing methods for oil shale have been demonstrated (and are in operation internationally), no method has proven its economic viability in the U.S (especially relative to other production methods for conventional oil). In this study, we have determined the oil supply price for ex situ oil shale processing as a function of six key input parameters: oil shale grade, production scale, capital and operating expenses (relative to a prototypical ex situ processing method), royalty rates, and the desired internal rate of return (IRR). Using a full-factorial experimental design, the oil supply prices for $11^6$ (approximately 1.8 million) unique combinations of these input parameters were determined by applying a discounted cash flow analysis to each input parameter set. Overall, we found that the median oil supply price for all scenarios was \$94/bbl (in 2014 USD); the 10th and 90th percentiles were \$56/bbl and \$178/bbl, respectively. A first-order linear regression model is presented to allow for estimation of the oil supply price within the parameter space investigated.
+
+\end{abstract}
+
+\begin{keyword}
+
+ex situ \sep oil shale \sep oil supply price \sep discounted cash flow analysis \sep design of experiments
+
+\end{keyword}
+
+\end{frontmatter}
+
+%%%% Article %%%%
+
+% Enable line numbers
+\linenumbers
+
+\section{Introduction}
+
+Oil shale is a fine-grained sedimentary rock containing organic material, which when heated pyrolysizes into oil. Large deposits of oil shale are located in the western U.S. (specifically eastern Utah and western Colorado), containing an estimated 2.85 trillion barrels of total oil in-place \citep{U.S.GeologicalSurveyOilShaleAssessmentTeam2010a, U.S.GeologicalSurveyOilShaleAssessmentTeam2010}. The potential development of oil shale resources would have enormous economic and environmental impacts. Consequently, the viability of producing oil from oil shale is a topic of interest to many constituencies (county and state government, landowners, technology developers, environmentalists, etc.). While a number of oil shale processing techniques have demonstrated their technical feasibility over the last century (oil shale production was first attempted in the U.S. in the mid-1910s \citep{EPAOilShaleWorkGroup1979}), none have proven economically viable compared to other methods of oil production. Therefore the potential cost of producing oil from oil shale is a topic of great interest in oil shale-rich regions of the U.S.
+
+The oil supply price (OSP), which is the oil price necessary for an oil production process to be profitable at a specified rate of return, has been estimated for both in situ (in place) and ex situ (above ground) oil shale production in several previous studies. \cite{Bartis2005} scaled up the capital and operating costs of the 1980s Colony \citep{Harney1983} and Union \citep{Albulescu1987} oil shale projects, and then applied a discounted cash flow (DCF) analysis to determine the OSP for a 50,000 barrel per day (BPD) ex situ oil shale project processing 35 gallon per ton (GPT) oil shale. The project included: mining and crushing, retorting, upgrading, delivery via pipeline to an oil refinery, spent shale disposal, and reclamation. Assuming a 10\% rate of return, Bartis et al. estimated an OSP of \$70 to \$95 dollars per barrel (\$/bbl, 2005 dollars). Bartis et al. found that the OSP estimate was highly sensitive to rate of return and plant utilization rate (the fraction of full-scale operation capacity at which the plant is running, assumed to be 85\%). The OSP estimate included state and federal taxes (5\% and 34\%, respectively) but is unclear on how royalties are treated (rates of 12.5\% and 16.7\% are both mentioned). While comprehensive, the estimate by Bartis et al. fails to itemize any of the components of the OSP, and no sensitivity or uncertainty analysis was performed.
+
+\cite{Biglarbigi2008}
+
+\section{Methodology}
+
+\subsection{Process Description}
+
+\subsection{Discounted Cash Flow Analysis}
+
+\subsubsection{Capital Costs}
+
+\subsubsection{Operating Costs}
+
+\subsubsection{Taxes and Royalties}
+
+\subsection{Experimental Design}
+
+\section{Results and Discussion}
+
+\section{Conclusions}
+
+\section*{Acknowledgements}
+
+\section*{References}
+
+\bibliography{mybibfile}
+
+\end{document}

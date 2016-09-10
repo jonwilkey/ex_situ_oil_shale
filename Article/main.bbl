@@ -1,0 +1,48 @@
+\begin{thebibliography}{7}
+\expandafter\ifx\csname natexlab\endcsname\relax\def\natexlab#1{#1}\fi
+\expandafter\ifx\csname url\endcsname\relax
+  \def\url#1{\texttt{#1}}\fi
+\expandafter\ifx\csname urlprefix\endcsname\relax\def\urlprefix{URL }\fi
+
+\bibitem[{Albulescu and Mazzella(1987)}]{Albulescu1987}
+Albulescu, P., Mazzella, G., jun 1987. {Fluidized-bed retorting of Colorado oil
+  shale: Topical report. [None]}. Tech. rep., USDOE Office of Fossil Energy
+  (FE).
+\newline\urlprefix\url{http://www.osti.gov/servlets/purl/5140769-P6lMYE/}
+
+\bibitem[{Bartis et~al.(2005)Bartis, LaTourrette, Dixon, Peterson, and
+  Cecchine}]{Bartis2005}
+Bartis, J.~T., LaTourrette, T., Dixon, L., Peterson, D.~J., Cecchine, G., 2005.
+  {Oil shale development in the United States - Prospects and policy issues}.
+  Tech. rep., RAND Corporation, Santa Monica, CA.
+
+\bibitem[{Biglarbigi et~al.(2008)Biglarbigi, Dammer, Mohan, and
+  Carolus}]{Biglarbigi2008}
+Biglarbigi, K., Dammer, A., Mohan, H., Carolus, M.~J., sep 2008. {Economics of
+  Oil Shale Development in the United States}. In: SPE Annual Technical
+  Conference and Exhibition. Society of Petroleum Engineers, Denver, CO.
+\newline\urlprefix\url{http://www.onepetro.org/doi/10.2118/116560-MS}
+
+\bibitem[{{EPA Oil Shale Work Group}(1979)}]{EPAOilShaleWorkGroup1979}
+{EPA Oil Shale Work Group}, 1979. {EPA Program Status Report: Oil Shale - 1979
+  Update}. Tech. rep., U.S. Environmental Protection Agency, Washington, DC.
+
+\bibitem[{Harney(1983)}]{Harney1983}
+Harney, B.~M., 1983. {Oil from Shale: An Analysis of Technology, Economics and
+  Future}. Marcel Dekker Inc, New York, NY.
+
+\bibitem[{{U.S. Geological Survey Oil Shale Assessment
+  Team}(2010{\natexlab{a}})}]{U.S.GeologicalSurveyOilShaleAssessmentTeam2010a}
+{U.S. Geological Survey Oil Shale Assessment Team}, 2010{\natexlab{a}}. {Oil
+  shale and nahcolite resources of the Piceance Basin, Colorado: U.S.
+  Geological Survey Digital Data Series DDS-69-Y}.
+\newline\urlprefix\url{http://pubs.usgs.gov/dds/dds-069/dds-069-y/}
+
+\bibitem[{{U.S. Geological Survey Oil Shale Assessment
+  Team}(2010{\natexlab{b}})}]{U.S.GeologicalSurveyOilShaleAssessmentTeam2010}
+{U.S. Geological Survey Oil Shale Assessment Team}, 2010{\natexlab{b}}. {Oil
+  shale resources of the Uinta Basin, Utah and Colorado: U.S. Geological Survey
+  Digital Data Series DDS-69-BB}.
+\newline\urlprefix\url{http://pubs.usgs.gov/dds/dds-069/dds-069-bb/}
+
+\end{thebibliography}
